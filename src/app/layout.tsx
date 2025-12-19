@@ -1,7 +1,8 @@
 // src/app/layout.tsx
 import './globals.css';
 import '@coinbase/onchainkit/styles.css'; 
-import { Providers } from '@/components/Providers'; // Import dari file yang baru dibuat
+import { Providers } from '@/components/Providers';
+import FarcasterProvider from '@/components/FarcasterProvider'; // Import Provider Baru
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -17,9 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-slate-950">
-        {/* Gunakan wrapper Providers di sini */}
+        {/* Bungkus dengan Providers (OnchainKit) dan FarcasterProvider */}
         <Providers>
+          <FarcasterProvider>
             {children}
+          </FarcasterProvider>
         </Providers>
       </body>
     </html>

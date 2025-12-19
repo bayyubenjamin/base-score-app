@@ -1,14 +1,15 @@
 // src/app/page.tsx
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from "@coinbase/onchainkit/wallet";
 import { Address, Avatar, Name, Identity, EthBalance } from "@coinbase/onchainkit/identity";
+import sdk from "@farcaster/frame-sdk"; // Import SDK
 import ProfileCard from "@/components/ProfileCard";
 import StatsGrid from "@/components/StatsGrid";
 import SearchBar from "@/components/SearchBar";
-import HistoryList from "@/components/HistoryList"; // Komponen Baru
+import HistoryList from "@/components/HistoryList";
 import { UserStats, calculateScore } from "@/lib/scoring";
 
 export default function Home() {
@@ -16,6 +17,20 @@ export default function Home() {
   const [data, setData] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isFrameContext, setIsFrameContext] = useState(false);
+
+  // --- CEK KONTEKS FRAME ---
+  useEffect(() => {
+    const checkContext = async () => {
+      const context = await sdk.context;
+      if (context) {
+        setIsFrameContext(true);
+        // Opsional: Jika Anda ingin auto-fetch berdasarkan user Farcaster
+        // console.log("Farcaster User:", context.user); 
+      }
+    };
+    checkContext();
+  }, []);
 
   // --- FUNGSI FETCH DATA ---
   const fetchData = async (queryAddress: string) => {
@@ -50,17 +65,27 @@ export default function Home() {
             fetchData(address);
         }
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, data?.address]); // Menambahkan dependency yang tepat
 
   // --- SEARCH HANDLER ---
   const handleSearch = (query: string) => {
     fetchData(query);
   };
 
-  // --- SHARE URL ---
+  // --- SHARE HANDLER ---
   const currentScore = data ? calculateScore(data).totalScore : 0;
   const shareText = `I checked my Onchain Score on Base! Score: ${currentScore}/100 🚀 Check yours here:`;
   const shareUrl = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareText);
+
+  const handleShare = useCallback(() => {
+    if (isFrameContext) {
+      // Jika di dalam Frame, gunakan SDK untuk membuka URL
+      sdk.actions.openUrl(shareUrl);
+    } else {
+      // Jika di browser biasa, buka tab baru
+      window.open(shareUrl, '_blank');
+    }
+  }, [isFrameContext, shareUrl]);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200 flex flex-col items-center p-4 pt-8 md:pt-12">
@@ -151,17 +176,15 @@ export default function Home() {
                 <HistoryList history={data.history} ownerAddress={data.address} />
             
                 {/* 5. Share Button */}
-                <a 
-                    href={shareUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-8 block w-full bg-[#855DCD] hover:bg-[#724BB7] text-white font-bold py-3 rounded-xl text-center transition shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2"
+                <button 
+                    onClick={handleShare}
+                    className="mt-8 w-full bg-[#855DCD] hover:bg-[#724BB7] text-white font-bold py-3 rounded-xl text-center transition shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 cursor-pointer"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white">
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                     </svg>
                     Share on Farcaster
-                </a>
+                </button>
             </div>
         )}
       </div>

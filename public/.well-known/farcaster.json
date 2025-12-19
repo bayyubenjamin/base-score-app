@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjM2MjEsInR5cGUiOiJjdXN0b2RpYWwiLCJrZXkiOiJweXRoZWlhIn0",
+    "payload": "eyJkb21haW4iOiJ5b3VyLWRvbWFpbi52ZXJjZWwuYXBwIn0",
+    "signature": "MIGIAkIB..."
+  },
+  "frame": {
+    "version": "1",
+    "name": "Base Score",
+    "iconUrl": "https://your-domain.vercel.app/icon.png",
+    "homeUrl": "https://your-domain.vercel.app",
+    "imageUrl": "https://your-domain.vercel.app/opengraph-image",
+    "buttonTitle": "Check Score",
+    "splashImageUrl": "https://your-domain.vercel.app/splash.png",
+    "splashBackgroundColor": "#0f172a",
+    "webhookUrl": "https://your-domain.vercel.app/api/webhook"
+  }
+}
