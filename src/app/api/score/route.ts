@@ -1,4 +1,3 @@
-// src/app/api/score/route.ts
 import { NextResponse } from "next/server";
 import { Alchemy, Network, AssetTransfersCategory, SortingOrder } from "alchemy-sdk";
 import { createPublicClient, http, formatEther, isAddress } from "viem";
@@ -30,7 +29,6 @@ export async function GET(request: Request) {
   try {
     // 1. Resolusi Basename / ENS jika input bukan address 0x
     if (!isAddress(query)) {
-      // Asumsi user memasukkan 'name.base.eth' atau 'name'
       const nameToResolve = query.includes(".") ? query : `${query}.base.eth`;
       const resolved = await publicClient.getEnsAddress({ name: nameToResolve });
       
@@ -41,7 +39,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Basename not found" }, { status: 404 });
       }
     } else {
-      // Jika input adalah address, coba cari Reverse Record (Optional, agar nama muncul)
+      // Jika input adalah address, coba cari Reverse Record
       const name = await publicClient.getEnsName({ address: query as `0x${string}` });
       if (name) resolvedName = name;
     }
@@ -64,11 +62,13 @@ export async function GET(request: Request) {
       alchemy.core.getTransactionCount(address),
 
       // Get First Transaction (Untuk Join Date)
+      // PERBAIKAN: withMetadata: true ditambahkan di sini
       alchemy.core.getAssetTransfers({
         fromAddress: address,
         category: [AssetTransfersCategory.EXTERNAL],
         order: SortingOrder.ASCENDING,
-        maxCount: 1
+        maxCount: 1,
+        withMetadata: true 
       }),
 
       // Get Recent Transactions (Untuk History)
@@ -76,7 +76,8 @@ export async function GET(request: Request) {
         fromAddress: address,
         category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20],
         order: SortingOrder.DESCENDING,
-        maxCount: 20 // Ambil 20 terakhir saja agar cepat
+        maxCount: 20,
+        withMetadata: true 
       })
     ]);
 
@@ -85,7 +86,8 @@ export async function GET(request: Request) {
     
     // Tentukan Join Date
     let joinDate = new Date().toISOString();
-    if (firstTx.transfers.length > 0 && firstTx.transfers[0].metadata.blockTimestamp) {
+    // TypeScript sekarang akan mengenali metadata karena withMetadata: true digunakan
+    if (firstTx.transfers.length > 0 && firstTx.transfers[0].metadata?.blockTimestamp) {
         joinDate = firstTx.transfers[0].metadata.blockTimestamp;
     }
 
@@ -103,12 +105,12 @@ export async function GET(request: Request) {
       address,
       resolvedName,
       ethBalance, 
-      tokenCount: 0, // Bisa ditambahkan jika perlu alchemy.core.getTokenBalances
+      tokenCount: 0, 
       nftCount: nfts.totalCount,
       txCount: txCount,
       joinDate: joinDate,
       history: history,
-      totalGasUsed: "Calculated on specific txs only" // Placeholder
+      totalGasUsed: "Calculated on specific txs only" 
     });
 
   } catch (error) {
