@@ -1,139 +1,165 @@
-// src/app/api/user/route.ts
 import { NextResponse } from "next/server";
-import { createPublicClient, http, isAddress, formatEther } from "viem";
-import { base } from "viem/chains";
-import { normalize } from 'viem/ens';
+import { Alchemy, Network, AssetTransfersCategory, SortingOrder } from "alchemy-sdk";
+import { createPublicClient, http, formatEther, isAddress } from "viem";
+import { base, mainnet } from "viem/chains"; // Tambahkan mainnet untuk ENS
+import { normalize } from 'viem/ens'; // Untuk normalisasi nama ENS
 
-const BASESCAN_API_KEY = process.env.BASESCAN_API_KEY;
+// 1. Config Alchemy untuk Data Transaksi (Base Mainnet)
+const config = {
+  apiKey: process.env.ALCHEMY_API_KEY,
+  network: Network.BASE_MAINNET,
+};
+const alchemy = new Alchemy(config);
 
-// Setup Client Viem
-const publicClient = createPublicClient({
+// 2. Client Khusus untuk Resolusi ENS/Basename (WAJIB Mainnet)
+// Basename sebenarnya adalah ENS, dan registry-nya ada di L1 (Mainnet)
+const ensClient = createPublicClient({
+  chain: mainnet,
+  transport: http(`https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`)
+});
+
+// 3. Client untuk Base (jika perlu interaksi spesifik chain Base)
+const baseClient = createPublicClient({
   chain: base,
-  transport: http(`https://mainnet.base.org`),
+  transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`)
 });
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("address");
 
-  if (!query) return NextResponse.json({ error: "Input kosong" }, { status: 400 });
+  if (!query) {
+    return NextResponse.json({ error: "Address or Basename is required" }, { status: 400 });
+  }
+
+  let address = query;
+  let resolvedName = null;
 
   try {
-    let targetAddress = query;
-    let resolvedName = null;
-
-    // --- 1. RESOLUSI ADDRESS/NAME ---
-    if (isAddress(query)) {
-      targetAddress = query;
+    // --- TAHAP 1: RESOLUSI ADDRESS/BASENAME ---
+    
+    if (!isAddress(query)) {
+      // Jika input bukan address (misal: "jesse" atau "jesse.base.eth")
+      let nameToResolve = query.toLowerCase();
+      
+      // Jika user hanya ketik "jesse", tambahkan suffix
+      if (!nameToResolve.includes(".")) {
+        nameToResolve = `${nameToResolve}.base.eth`;
+      }
+      
       try {
-        const name = await publicClient.getEnsName({ address: targetAddress as `0x${string}` });
-        if (name) resolvedName = name;
-      } catch (e) {}
-    } else if (query.includes(".")) {
-      try {
-        const address = await publicClient.getEnsAddress({ name: normalize(query) });
-        if (!address) return NextResponse.json({ error: "Nama tidak ditemukan" }, { status: 404 });
-        targetAddress = address;
-        resolvedName = query;
+        // Resolve menggunakan Mainnet Client
+        const resolved = await ensClient.getEnsAddress({ 
+          name: normalize(nameToResolve) 
+        });
+        
+        if (resolved) {
+          address = resolved;
+          resolvedName = nameToResolve;
+        } else {
+          return NextResponse.json({ error: "Basename not found" }, { status: 404 });
+        }
       } catch (err) {
-        return NextResponse.json({ error: "Gagal resolve nama" }, { status: 404 });
+        console.error("ENS Resolution Error:", err);
+        return NextResponse.json({ error: "Error resolving name" }, { status: 404 });
       }
     } else {
-      return NextResponse.json({ error: "Format tidak valid" }, { status: 400 });
+      // Jika input adalah address, coba cari Reverse Record (Opsional)
+      try {
+        const name = await ensClient.getEnsName({ address: query as `0x${string}` });
+        if (name) resolvedName = name;
+      } catch (e) {
+        // Ignore error jika reverse lookup gagal
+      }
     }
 
-    // --- 2. FETCH DATA PRESISI ---
-    let ethBalance = 0;
-    let txCount = 0;
-    let firstTxDate = new Date().toISOString();
-    let history: any[] = [];
-    let totalGasPaidWei = BigInt(0); // Gunakan BigInt untuk presisi
-
-    const baseUrl = "https://api.basescan.org/api";
+    // --- TAHAP 2: AMBIL DATA ONCHAIN (PARALEL) ---
     
-    try {
-      // KITA LAKUKAN 3 REQUEST PARALEL KE BASESCAN:
-      // 1. Balance & Recent History (untuk display list & gas calculation sample)
-      // 2. First Transaction (untuk Wallet Age yang AKURAT)
+    const [
+      balanceWei, 
+      nfts, 
+      txCount, 
+      tokenBalances, // Fetch saldo token
+      firstTx,
+      recentTx
+    ] = await Promise.all([
+      // 1. Native Balance (ETH)
+      alchemy.core.getBalance(address),
       
-      const [balanceRes, recentTxRes, firstTxRes] = await Promise.all([
-        // Req 1: Balance
-        fetch(`${baseUrl}?module=account&action=balance&address=${targetAddress}&tag=latest&apikey=${BASESCAN_API_KEY}`).then(r => r.json()),
-        // Req 2: 50 Transaksi Terakhir (Desc)
-        fetch(`${baseUrl}?module=account&action=txlist&address=${targetAddress}&page=1&offset=50&sort=desc&apikey=${BASESCAN_API_KEY}`).then(r => r.json()),
-        // Req 3: 1 Transaksi PERTAMA (Asc) -> KUNCI UNTUK WALLET AGE
-        fetch(`${baseUrl}?module=account&action=txlist&address=${targetAddress}&page=1&offset=1&sort=asc&apikey=${BASESCAN_API_KEY}`).then(r => r.json())
-      ]);
+      // 2. NFT Count
+      alchemy.nft.getNftsForOwner(address),
+      
+      // 3. Transaction Count (Nonce)
+      alchemy.core.getTransactionCount(address),
 
-      // Parse Balance
-      if (balanceRes.status === "1") {
-        ethBalance = parseFloat((parseInt(balanceRes.result) / 1e18).toFixed(5)); // 5 decimal biar kelihatan
-      } else {
-        throw new Error("BaseScan Limit/Error");
-      }
+      // 4. Token Balances (Untuk mengisi tokenCount)
+      alchemy.core.getTokenBalances(address),
 
-      // Parse History Terbaru (Display & Gas Sample)
-      if (recentTxRes.status === "1" && Array.isArray(recentTxRes.result)) {
-        const txs = recentTxRes.result;
-        
-        // Ambil 10 teratas untuk UI
-        history = txs.slice(0, 10).map((tx: any) => ({
-            hash: tx.hash,
-            from: tx.from,
-            to: tx.to,
-            value: formatEther(BigInt(tx.value)),
-            timeStamp: tx.timeStamp,
-            isError: tx.isError,
-        }));
+      // 5. First Transaction (Untuk Join Date)
+      alchemy.core.getAssetTransfers({
+        fromAddress: address,
+        category: [AssetTransfersCategory.EXTERNAL],
+        order: SortingOrder.ASCENDING,
+        maxCount: 1,
+        withMetadata: true 
+      }),
 
-        // Hitung Gas Burned (Sample 50 tx terakhir)
-        // Rumus: GasUsed * GasPrice
-        txs.forEach((tx: any) => {
-            const gasUsed = BigInt(tx.gasUsed);
-            const gasPrice = BigInt(tx.gasPrice || 0);
-            totalGasPaidWei += (gasUsed * gasPrice);
-        });
-      }
+      // 6. Recent Transactions (Untuk History & Gas Estimation sampel)
+      alchemy.core.getAssetTransfers({
+        fromAddress: address,
+        category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20],
+        order: SortingOrder.DESCENDING,
+        maxCount: 20,
+        withMetadata: true 
+      })
+    ]);
 
-      // Parse Wallet Age (Dari request ke-3)
-      if (firstTxRes.status === "1" && Array.isArray(firstTxRes.result) && firstTxRes.result.length > 0) {
-        // Ambil timestamp transaksi pertama kali user main di Base
-        const firstTxTimestamp = parseInt(firstTxRes.result[0].timeStamp);
-        firstTxDate = new Date(firstTxTimestamp * 1000).toISOString();
-      }
+    // --- TAHAP 3: FORMAT DATA ---
 
-      // Parse Total Tx Count (Kita bisa estimasi dari nonce via RPC agar cepat & gratis)
-      // BaseScan tidak return total count di endpoint txlist, jadi kita pakai RPC count
-      const nonce = await publicClient.getTransactionCount({ address: targetAddress as `0x${string}` });
-      txCount = nonce;
+    // Format ETH Balance
+    const ethBalance = formatEther(BigInt(balanceWei.toString()));
+    
+    // Hitung Token Count (hanya yang saldonya > 0)
+    const activeTokenCount = tokenBalances.tokenBalances.filter(t => {
+      // Cek hex string balance, pastikan valid dan > 0
+      return t.tokenBalance && t.tokenBalance !== "0x" && BigInt(t.tokenBalance) > 0;
+    }).length;
 
-    } catch (apiError) {
-      console.warn("BaseScan Error, fallback mode.", apiError);
-      // Fallback
-      const [bal, nonce] = await Promise.all([
-        publicClient.getBalance({ address: targetAddress as `0x${string}` }),
-        publicClient.getTransactionCount({ address: targetAddress as `0x${string}` })
-      ]);
-      ethBalance = parseFloat(formatEther(bal));
-      txCount = nonce;
+    // Tentukan Join Date
+    let joinDate = new Date().toISOString();
+    if (firstTx.transfers.length > 0 && firstTx.transfers[0].metadata?.blockTimestamp) {
+        joinDate = firstTx.transfers[0].metadata.blockTimestamp;
     }
 
-    // Format Gas ke String ETH
-    const totalGasEth = parseFloat(formatEther(totalGasPaidWei));
+    // Format History
+    const history = recentTx.transfers.map(tx => ({
+        hash: tx.hash,
+        from: tx.from,
+        to: tx.to || "",
+        value: tx.value?.toString() || "0",
+        asset: tx.asset || "Unknown",
+        blockNum: tx.blockNum
+    }));
+
+    // Estimasi Gas (Opsional: Tetap "0" jika tidak punya data gas onchain yang akurat)
+    // Untuk mendapatkan total gas akurat perlu indexer berbayar atau loop ribuan tx.
+    // Kita biarkan "0" atau hitung sampel kecil jika mau, tapi "0" lebih aman agar cepat.
+    const totalGasUsed = "0"; 
 
     return NextResponse.json({
-      address: targetAddress,
-      basename: resolvedName, 
-      ethBalance,
-      txCount, 
-      nftCount: 0,
-      joinDate: firstTxDate,
-      history,      
-      totalGasUsed: totalGasEth // Kirim dalam format ETH (float)
+      address,
+      resolvedName, // Mengembalikan nama yang ditemukan (misal jesse.base.eth)
+      ethBalance, 
+      tokenCount: activeTokenCount, // Data token sekarang dinamis
+      nftCount: nfts.totalCount,
+      txCount: txCount,
+      joinDate: joinDate,
+      history: history,
+      totalGasUsed
     });
 
   } catch (error) {
-    console.error("Server Error:", error);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    console.error("API General Error:", error);
+    return NextResponse.json({ error: "Failed to fetch onchain data" }, { status: 500 });
   }
 }

@@ -15,10 +15,11 @@ export type UserStats = {
   resolvedName?: string | null;
   ethBalance: string;
   txCount: number;
+  tokenCount: number; // Pastikan field ini ada
   nftCount: number;
   joinDate: string;
   history: Transaction[]; 
-  totalGasUsed: string; // Wajib string untuk menghindari error type
+  totalGasUsed: string;
 };
 
 export type ScoreResult = {
@@ -60,9 +61,10 @@ export function calculateScore(stats: UserStats): ScoreResult {
   score += activityPoints;
   breakdown.activity = activityPoints;
 
-  // 3. Wealth (ETH Balance) - Max 25
+  // 3. Wealth (ETH Balance + Token Bonus) - Max 25
   let wealthPoints = 0;
   const ethBal = parseFloat(stats.ethBalance);
+  
   if (ethBal >= 1.0) {
     wealthPoints = 25;
     badges.push("🐳 Whale");
@@ -72,12 +74,18 @@ export function calculateScore(stats: UserStats): ScoreResult {
   } else if (ethBal >= 0.01) {
     wealthPoints = 5;
   }
+
+  // Bonus poin kecil jika punya banyak token (opsional)
+  if (stats.tokenCount > 5 && wealthPoints < 25) {
+      wealthPoints = Math.min(wealthPoints + 5, 25);
+      badges.push("🎒 Collector");
+  }
+
   score += wealthPoints;
   breakdown.wealth = wealthPoints;
 
   // 4. Loyalty (Wallet Age) - Max 15
   let loyaltyPoints = 0;
-  // Fallback ke sekarang jika joinDate invalid
   const joinDate = stats.joinDate ? new Date(stats.joinDate) : new Date();
   const daysOld = (new Date().getTime() - joinDate.getTime()) / (1000 * 3600 * 24);
   
