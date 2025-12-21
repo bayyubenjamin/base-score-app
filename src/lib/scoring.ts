@@ -1,77 +1,103 @@
 // src/lib/scoring.ts
+import { formatEther } from "viem";
 
 export type Transaction = {
   hash: string;
   from: string;
   to: string;
   value: string;
-  timeStamp: string;
-  isError: string;
-  gasUsed: string;
+  blockNum: string;
+  asset?: string;
 };
 
 export type UserStats = {
   address: string;
-  basename?: string | null;
-  ethBalance: number;
+  resolvedName?: string | null; // Basename yang ditemukan
+  ethBalance: string; // Menggunakan string untuk presisi BigInt
   txCount: number;
   nftCount: number;
   joinDate: string;
-  // Field Baru
   history: Transaction[]; 
-  totalGasUsed: number; 
+  totalGasUsed?: string; // Optional karena kalkulasi berat
 };
 
 export type ScoreResult = {
   totalScore: number;
   level: string;
   badges: string[];
+  breakdown: {
+    identity: number;
+    activity: number;
+    wealth: number;
+    loyalty: number;
+  }
 };
 
 export function calculateScore(stats: UserStats): ScoreResult {
   let score = 0;
   const badges: string[] = [];
+  const breakdown = { identity: 0, activity: 0, wealth: 0, loyalty: 0 };
 
-  // 1. Identity (Basename)
-  if (stats.basename) {
-    score += 25;
+  // 1. Identity (Basename) - Max 25
+  if (stats.resolvedName) {
+    const points = 25;
+    score += points;
+    breakdown.identity = points;
     badges.push("🏷️ Base OG");
   }
 
-  // 2. Transaction Activity
-  if (stats.txCount >= 500) {
-    score += 40;
+  // 2. Activity (Tx Count) - Max 35
+  let activityPoints = 0;
+  if (stats.txCount >= 1000) {
+    activityPoints = 35;
     badges.push("⚡ Power User");
   } else if (stats.txCount >= 100) {
-    score += 25;
+    activityPoints = 20;
     badges.push("🔥 Active");
   } else if (stats.txCount >= 10) {
-    score += 10;
+    activityPoints = 10;
   }
+  score += activityPoints;
+  breakdown.activity = activityPoints;
 
-  // 3. Wealth (Balance)
-  if (stats.ethBalance >= 1.0) {
-    score += 35;
+  // 3. Wealth (ETH Balance) - Max 25
+  let wealthPoints = 0;
+  const ethBal = parseFloat(stats.ethBalance);
+  if (ethBal >= 1.0) {
+    wealthPoints = 25;
     badges.push("🐳 Whale");
-  } else if (stats.ethBalance >= 0.1) {
-    score += 20;
+  } else if (ethBal >= 0.1) {
+    wealthPoints = 15;
     badges.push("💰 Holder");
-  } else if (stats.ethBalance >= 0.01) {
-    score += 10;
+  } else if (ethBal >= 0.01) {
+    wealthPoints = 5;
   }
+  score += wealthPoints;
+  breakdown.wealth = wealthPoints;
 
-  // 4. Loyalty (Wallet Age)
-  const daysOld = (new Date().getTime() - new Date(stats.joinDate).getTime()) / (1000 * 3600 * 24);
-  if (daysOld > 180) { 
-      score += 5; 
+  // 4. Loyalty (Wallet Age) - Max 15
+  let loyaltyPoints = 0;
+  // Fallback ke sekarang jika joinDate invalid
+  const joinDate = stats.joinDate ? new Date(stats.joinDate) : new Date();
+  const daysOld = (new Date().getTime() - joinDate.getTime()) / (1000 * 3600 * 24);
+  
+  if (daysOld > 365) { 
+      loyaltyPoints = 15; 
+      badges.push("🏛️ Founding Father");
+  } else if (daysOld > 180) {
+      loyaltyPoints = 10;
       badges.push("👴 Veteran");
+  } else if (daysOld > 30) {
+      loyaltyPoints = 5;
   }
+  score += loyaltyPoints;
+  breakdown.loyalty = loyaltyPoints;
 
   // Level Logic
   let level = "Newbie";
   if (score >= 90) level = "Based God";
-  else if (score >= 60) level = "Crypto Native";
-  else if (score >= 30) level = "Explorer";
+  else if (score >= 70) level = "Crypto Native";
+  else if (score >= 40) level = "Explorer";
 
-  return { totalScore: Math.min(score, 100), level, badges };
+  return { totalScore: Math.min(score, 100), level, badges, breakdown };
 }
