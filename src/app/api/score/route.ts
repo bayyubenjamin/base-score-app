@@ -1,3 +1,4 @@
+// src/app/api/score/route.ts
 import { NextResponse } from "next/server";
 import { Alchemy, Network, AssetTransfersCategory, SortingOrder } from "alchemy-sdk";
 import { createPublicClient, http, formatEther, isAddress } from "viem";
@@ -62,7 +63,6 @@ export async function GET(request: Request) {
       alchemy.core.getTransactionCount(address),
 
       // Get First Transaction (Untuk Join Date)
-      // PERBAIKAN: withMetadata: true ditambahkan di sini
       alchemy.core.getAssetTransfers({
         fromAddress: address,
         category: [AssetTransfersCategory.EXTERNAL],
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     
     // Tentukan Join Date
     let joinDate = new Date().toISOString();
-    // TypeScript sekarang akan mengenali metadata karena withMetadata: true digunakan
+    // TypeScript sekarang mengenali metadata karena withMetadata: true digunakan
     if (firstTx.transfers.length > 0 && firstTx.transfers[0].metadata?.blockTimestamp) {
         joinDate = firstTx.transfers[0].metadata.blockTimestamp;
     }
@@ -110,7 +110,8 @@ export async function GET(request: Request) {
       txCount: txCount,
       joinDate: joinDate,
       history: history,
-      totalGasUsed: "Calculated on specific txs only" 
+      // Default "0" string untuk menghindari error kalkulasi
+      totalGasUsed: "0" 
     });
 
   } catch (error) {

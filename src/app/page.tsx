@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from "@coinbase/onchainkit/wallet";
 import { Address, Avatar, Name, Identity, EthBalance } from "@coinbase/onchainkit/identity";
-import sdk from "@farcaster/frame-sdk"; // Import SDK
+import sdk from "@farcaster/frame-sdk"; 
 import ProfileCard from "@/components/ProfileCard";
 import StatsGrid from "@/components/StatsGrid";
 import SearchBar from "@/components/SearchBar";
@@ -25,8 +25,6 @@ export default function Home() {
       const context = await sdk.context;
       if (context) {
         setIsFrameContext(true);
-        // Opsional: Jika Anda ingin auto-fetch berdasarkan user Farcaster
-        // console.log("Farcaster User:", context.user); 
       }
     };
     checkContext();
@@ -65,7 +63,7 @@ export default function Home() {
             fetchData(address);
         }
     }
-  }, [isConnected, address, data?.address]); // Menambahkan dependency yang tepat
+  }, [isConnected, address, data?.address]); 
 
   // --- SEARCH HANDLER ---
   const handleSearch = (query: string) => {
@@ -79,10 +77,8 @@ export default function Home() {
 
   const handleShare = useCallback(() => {
     if (isFrameContext) {
-      // Jika di dalam Frame, gunakan SDK untuk membuka URL
       sdk.actions.openUrl(shareUrl);
     } else {
-      // Jika di browser biasa, buka tab baru
       window.open(shareUrl, '_blank');
     }
   }, [isFrameContext, shareUrl]);
@@ -167,13 +163,13 @@ export default function Home() {
                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center">
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest">Gas Burned</p>
                         <p className="font-mono font-bold text-white text-lg">
-                            {(data.totalGasUsed / 1e9).toFixed(5)} <span className="text-xs text-slate-500 font-normal">ETH</span>
+                            {parseFloat(data.totalGasUsed).toFixed(5)} <span className="text-xs text-slate-500 font-normal">ETH</span>
                         </p>
                      </div>
                 </div>
 
                 {/* 4. Transaction History */}
-                <HistoryList history={data.history} ownerAddress={data.address} />
+                <HistoryList history={data.history} currentAddress={data.address} />
             
                 {/* 5. Share Button */}
                 <button 

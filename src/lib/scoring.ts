@@ -12,13 +12,13 @@ export type Transaction = {
 
 export type UserStats = {
   address: string;
-  resolvedName?: string | null; // Basename yang ditemukan
-  ethBalance: string; // Menggunakan string untuk presisi BigInt
+  resolvedName?: string | null;
+  ethBalance: string;
   txCount: number;
   nftCount: number;
   joinDate: string;
   history: Transaction[]; 
-  totalGasUsed?: string; // Optional karena kalkulasi berat
+  totalGasUsed: string; // Wajib string untuk menghindari error type
 };
 
 export type ScoreResult = {
