@@ -19,18 +19,14 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState("");
   const [isFrameContext, setIsFrameContext] = useState(false);
 
-  // --- CEK KONTEKS FRAME ---
   useEffect(() => {
     const checkContext = async () => {
       const context = await sdk.context;
-      if (context) {
-        setIsFrameContext(true);
-      }
+      if (context) setIsFrameContext(true);
     };
     checkContext();
   }, []);
 
-  // --- FUNGSI FETCH DATA ---
   const fetchData = async (queryAddress: string) => {
     setLoading(true);
     setErrorMsg(""); 
@@ -43,9 +39,11 @@ export default function Home() {
       if (!response.ok) {
         setErrorMsg(result.error || "Gagal mengambil data wallet.");
       } else {
+        // PERBAIKAN: Mapping data API ke state
+        // API sekarang mengembalikan 'resolvedName', kita gunakan itu.
         setData({
           ...result,
-          basename: result.basename || (queryAddress.includes('.') ? queryAddress : null)
+          resolvedName: result.resolvedName || (queryAddress.includes('.') ? queryAddress : null)
         });
       }
     } catch (e) {
@@ -56,43 +54,32 @@ export default function Home() {
     }
   };
 
-  // --- AUTO DETECT WALLET ---
   useEffect(() => {
     if (isConnected && address) {
         if (data?.address.toLowerCase() !== address.toLowerCase()) {
             fetchData(address);
         }
     }
-  }, [isConnected, address, data?.address]); 
+  }, [isConnected, address, data?.address]);
 
-  // --- SEARCH HANDLER ---
-  const handleSearch = (query: string) => {
-    fetchData(query);
-  };
+  const handleSearch = (query: string) => { fetchData(query); };
 
-  // --- SHARE HANDLER ---
   const currentScore = data ? calculateScore(data).totalScore : 0;
   const shareText = `I checked my Onchain Score on Base! Score: ${currentScore}/100 🚀 Check yours here:`;
   const shareUrl = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareText);
 
   const handleShare = useCallback(() => {
-    if (isFrameContext) {
-      sdk.actions.openUrl(shareUrl);
-    } else {
-      window.open(shareUrl, '_blank');
-    }
+    if (isFrameContext) sdk.actions.openUrl(shareUrl);
+    else window.open(shareUrl, '_blank');
   }, [isFrameContext, shareUrl]);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200 flex flex-col items-center p-4 pt-8 md:pt-12">
-      
-      {/* HEADER */}
       <div className="w-full max-w-md flex justify-between items-center mb-10">
         <div className="flex flex-col">
             <h1 className="font-black text-xl text-blue-500 tracking-tighter">BASE<span className="text-white">SCORE</span></h1>
             <span className="text-[10px] text-slate-500 font-mono">PROFILER</span>
         </div>
-        
         <div className="flex justify-end">
           <Wallet>
             <ConnectWallet className="bg-slate-800 text-white text-sm font-bold px-4 py-2 rounded-full hover:bg-slate-700 transition">
@@ -112,19 +99,14 @@ export default function Home() {
         </div>
       </div>
 
-      {/* HERO TEXT */}
       <div className="w-full max-w-md text-center mb-8">
         <h2 className="text-3xl font-bold text-white mb-2">Check Your Cred</h2>
         <p className="text-slate-500 text-sm">Analyze your wallet activity & history on Base.</p>
       </div>
 
-      {/* SEARCH BAR */}
       <SearchBar onSearch={handleSearch} isLoading={loading} />
 
-      {/* RESULT AREA */}
       <div className="w-full max-w-md mt-6 min-h-[300px] flex flex-col items-center pb-20">
-        
-        {/* ERROR STATE */}
         {errorMsg && (
             <div className="w-full p-4 bg-red-900/20 border border-red-800 text-red-200 rounded-xl flex flex-col items-center animate-in fade-in slide-in-from-bottom-4">
                 <p className="font-bold text-sm">❌ Oops!</p>
@@ -132,7 +114,6 @@ export default function Home() {
             </div>
         )}
 
-        {/* LOADING STATE */}
         {loading && (
             <div className="w-full flex flex-col items-center animate-pulse mt-10">
                 <div className="h-48 w-full bg-slate-900 rounded-2xl mb-4 border border-slate-800"></div>
@@ -142,17 +123,11 @@ export default function Home() {
             </div>
         )}
 
-        {/* DATA SUCCESS */}
         {!loading && !errorMsg && data && (
             <div className="w-full animate-in zoom-in-95 duration-300">
-                
-                {/* 1. Main Profile */}
                 <ProfileCard data={data} />
-                
-                {/* 2. Basic Stats Grid */}
                 <StatsGrid data={data} />
 
-                {/* 3. Deep Stats (Age & Gas) */}
                 <div className="w-full grid grid-cols-2 gap-3 mt-3">
                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center">
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest">Wallet Age</p>
@@ -168,18 +143,13 @@ export default function Home() {
                      </div>
                 </div>
 
-                {/* 4. Transaction History */}
                 <HistoryList history={data.history} currentAddress={data.address} />
             
-                {/* 5. Share Button */}
                 <button 
                     onClick={handleShare}
                     className="mt-8 w-full bg-[#855DCD] hover:bg-[#724BB7] text-white font-bold py-3 rounded-xl text-center transition shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                    </svg>
-                    Share on Farcaster
+                    Share Result
                 </button>
             </div>
         )}
