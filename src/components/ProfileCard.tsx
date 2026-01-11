@@ -1,109 +1,136 @@
-// src/components/ProfileCard.tsx
 import { UserStats, calculateScore } from "@/lib/scoring";
 import { Avatar, Name, Identity, Address } from "@coinbase/onchainkit/identity";
+import { Trophy, Medal, Sparkles, Crown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function ProfileCard({ data }: { data: UserStats }) {
   const { totalScore, level, badges } = calculateScore(data);
 
-  // LOGIKA WARNA & STYLE (Diperbarui untuk desain baru yang lebih "Cyber/Neon")
-  let accentGradient = "from-slate-600 to-slate-800";
-  let shadowColor = "shadow-slate-900/50";
-  let textColor = "text-slate-300";
-  let ringColor = "ring-slate-700";
+  // Helper untuk menentukan tema visual berdasarkan Level
+  const getLevelTheme = (lvl: string) => {
+    switch (lvl) {
+      case "Based God":
+        return {
+          wrapper: "from-blue-600 via-indigo-500 to-cyan-400",
+          glow: "shadow-blue-500/50",
+          text: "text-blue-100",
+          icon: <Crown className="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse" />,
+          badgeBg: "bg-blue-500/20 border-blue-500/30",
+          scoreGradient: "from-white via-blue-100 to-cyan-200"
+        };
+      case "Crypto Native":
+        return {
+          wrapper: "from-fuchsia-600 via-purple-600 to-pink-500",
+          glow: "shadow-purple-500/50",
+          text: "text-purple-100",
+          icon: <Sparkles className="w-4 h-4 text-fuchsia-300" />,
+          badgeBg: "bg-fuchsia-500/20 border-fuchsia-500/30",
+          scoreGradient: "from-white via-fuchsia-100 to-pink-200"
+        };
+      default: // Explorer
+        return {
+          wrapper: "from-emerald-500 via-green-500 to-teal-400",
+          glow: "shadow-emerald-500/50",
+          text: "text-emerald-100",
+          icon: <Trophy className="w-4 h-4 text-emerald-300" />,
+          badgeBg: "bg-emerald-500/20 border-emerald-500/30",
+          scoreGradient: "from-white via-emerald-100 to-teal-200"
+        };
+    }
+  };
 
-  if (level === "Based God") {
-    // Biru Elektrik ke Cyan
-    accentGradient = "from-blue-600 via-cyan-500 to-blue-600";
-    shadowColor = "shadow-blue-500/40";
-    textColor = "text-blue-100";
-    ringColor = "ring-blue-500";
-  } else if (level === "Crypto Native") {
-    // Ungu Neon ke Pink
-    accentGradient = "from-purple-600 via-fuchsia-500 to-purple-600";
-    shadowColor = "shadow-purple-500/40";
-    textColor = "text-purple-100";
-    ringColor = "ring-purple-500";
-  } else if (level === "Explorer") {
-    // Emerald Hijau
-    accentGradient = "from-emerald-600 via-green-500 to-emerald-600";
-    shadowColor = "shadow-emerald-500/40";
-    textColor = "text-emerald-100";
-    ringColor = "ring-emerald-500";
-  }
+  const theme = getLevelTheme(level);
 
   return (
-    <div className="w-full max-w-md relative group perspective-1000">
+    <div className="relative w-full max-w-md group">
       
-      {/* 1. ANIMATED GLOWING BORDER (Di belakang kartu utama) */}
+      {/* 1. LAYER: Animated Ambient Glow (Backdrop) */}
       <div 
-        className={`absolute -inset-0.5 bg-gradient-to-r ${accentGradient} 
-        rounded-[2rem] blur opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt`}
-      ></div>
+        className={cn(
+          "absolute -inset-1 rounded-[2.5rem] bg-gradient-to-r blur-xl opacity-40 transition-all duration-500 group-hover:opacity-75 group-hover:blur-2xl",
+          theme.wrapper
+        )}
+      />
 
-      {/* 2. CARD CONTAINER UTAMA */}
-      <div className="relative bg-black rounded-[1.8rem] p-1 h-full">
-        <div className="bg-neutral-900/90 h-full w-full rounded-[1.6rem] p-6 flex flex-col justify-between overflow-hidden relative backdrop-blur-sm">
+      {/* 2. LAYER: Main Card Content */}
+      <div className="relative h-full overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0a0a] p-1">
+        
+        {/* Inner Container with slight transparency */}
+        <div className="flex h-full flex-col justify-between rounded-[1.8rem] bg-neutral-900/50 p-6 backdrop-blur-3xl md:p-8">
             
-            {/* Background Texture/Pattern */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+            {/* Dekorasi: Background Noise/Gradient Spot */}
+            <div className={cn("absolute -top-20 -right-20 h-64 w-64 rounded-full bg-gradient-to-br opacity-20 blur-[80px]", theme.wrapper)} />
 
-            {/* HEADER: Level Badge & Address */}
-            <div className="flex justify-between items-start mb-6 z-10">
-                <div className={`px-3 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur-md ${shadowColor} shadow-lg`}>
-                    <span className={`text-xs font-black tracking-widest uppercase bg-gradient-to-r ${accentGradient} bg-clip-text text-transparent`}>
+            {/* HEADER: Identity & Rank */}
+            <div className="z-10 flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                    {/* OnchainKit Avatar Wrapper */}
+                    <div className={cn("relative rounded-full p-[2px] bg-gradient-to-tr", theme.wrapper)}>
+                        <Identity 
+                            address={data.address as `0x${string}`} 
+                            schemaId="0xf8b05c79f090979bf4a80270aba232dff11a10d9ca55c4f88de95317970f0de9"
+                        >
+                            <Avatar className="h-16 w-16 rounded-full border-4 border-[#0a0a0a] bg-black" />
+                        </Identity>
+                        {/* Status Dot */}
+                        <div className="absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-black bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]" />
+                    </div>
+                    
+                    <div className="flex flex-col">
+                         <div className="text-xl font-bold text-white truncate max-w-[150px]">
+                            {data.resolvedName ? (
+                              <span>{data.resolvedName}</span>
+                            ) : (
+                              <Name address={data.address as `0x${string}`} className="text-white" />
+                            )}
+                        </div>
+                        <div className="flex items-center gap-1.5 opacity-60">
+                             <Address address={data.address as `0x${string}`} className="text-xs font-mono text-neutral-300" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Level Badge */}
+                <div className={cn(
+                    "flex items-center gap-2 rounded-full px-3 py-1.5 border backdrop-blur-md shadow-lg",
+                    theme.badgeBg
+                )}>
+                    {theme.icon}
+                    <span className="text-xs font-bold uppercase tracking-wider text-white">
                         {level}
                     </span>
                 </div>
-                <div className="opacity-50 group-hover:opacity-100 transition-opacity">
-                    <Address address={data.address as `0x${string}`} className="text-[10px] font-mono text-neutral-400 bg-neutral-800 px-2 py-1 rounded-md" />
+            </div>
+
+            {/* BODY: The Big Score */}
+            <div className="z-10 mt-10 text-center">
+                <div className="text-sm font-medium uppercase tracking-widest text-neutral-500 mb-2">
+                    Onchain Reputation Score
+                </div>
+                <div className={cn(
+                    "text-7xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b drop-shadow-2xl",
+                    theme.scoreGradient
+                )}>
+                    {totalScore}
                 </div>
             </div>
 
-            {/* MAIN CONTENT: Grid Layout (Avatar Left, Score Right) */}
-            <div className="grid grid-cols-[auto_1fr] gap-6 items-center mb-8 z-10">
-                
-                {/* Avatar Section */}
-                <div className="relative">
-                    <div className={`absolute -inset-2 rounded-full blur-md opacity-40 bg-gradient-to-tr ${accentGradient}`}></div>
-                    <Identity 
-                        address={data.address as `0x${string}`} 
-                        schemaId="0xf8b05c79f090979bf4a80270aba232dff11a10d9ca55c4f88de95317970f0de9"
-                    >
-                        <Avatar className={`h-20 w-20 ring-2 ${ringColor} bg-black shadow-2xl relative z-10`} />
-                    </Identity>
-                </div>
-
-                {/* Name & Score Section */}
-                <div className="flex flex-col items-end text-right">
-                    <div className="text-sm font-medium text-neutral-400 mb-1">Total Score</div>
-                    <div className={`text-6xl font-black tracking-tighter leading-none ${textColor} drop-shadow-2xl`}>
-                        {totalScore}
-                    </div>
-                    
-                    <div className="mt-2 font-bold text-lg text-white truncate max-w-[160px]">
-                        {data.resolvedName ? (
-                        <span>{data.resolvedName}</span>
-                        ) : (
-                        <Name address={data.address as `0x${string}`} className="text-white" />
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* FOOTER: Badges Area */}
-            <div className="relative z-10">
-                <div className="h-px w-full bg-gradient-to-r from-transparent via-neutral-700 to-transparent mb-4"></div>
-                
-                <div className="flex flex-wrap gap-2">
-                    {badges.length > 0 ? badges.map((badge, i) => (
-                        <span 
-                            key={i} 
-                            className="px-2 py-1 bg-neutral-800/80 border border-white/5 rounded text-[10px] text-neutral-300 font-medium hover:border-white/20 hover:bg-neutral-700 transition cursor-help"
-                        >
-                            {badge}
-                        </span>
-                    )) : (
-                        <span className="text-xs text-neutral-600 font-mono w-full text-center py-2">No achievements unlocked</span>
+            {/* FOOTER: Badges / Achievements */}
+            <div className="z-10 mt-10">
+                <div className="mb-4 h-px w-full bg-gradient-to-r from-transparent via-neutral-800 to-transparent" />
+                <div className="flex flex-wrap justify-center gap-2">
+                    {badges.length > 0 ? (
+                        badges.map((badge, i) => (
+                            <span 
+                                key={i} 
+                                className="inline-flex items-center rounded-md border border-white/5 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-neutral-400 transition-colors hover:border-white/20 hover:text-white"
+                            >
+                                <Medal className="mr-1.5 h-3 w-3 opacity-50" />
+                                {badge}
+                            </span>
+                        ))
+                    ) : (
+                        <span className="text-xs text-neutral-600 font-mono">No badges earned yet.</span>
                     )}
                 </div>
             </div>
