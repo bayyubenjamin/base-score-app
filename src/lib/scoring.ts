@@ -15,7 +15,7 @@ export type UserStats = {
   resolvedName?: string | null;
   ethBalance: string;
   txCount: number;
-  tokenCount: number; // Pastikan field ini ada
+  tokenCount: number;
   nftCount: number;
   joinDate: string;
   history: Transaction[]; 
@@ -75,7 +75,7 @@ export function calculateScore(stats: UserStats): ScoreResult {
     wealthPoints = 5;
   }
 
-  // Bonus poin kecil jika punya banyak token (opsional)
+  // Bonus poin kecil jika punya banyak token
   if (stats.tokenCount > 5 && wealthPoints < 25) {
       wealthPoints = Math.min(wealthPoints + 5, 25);
       badges.push("🎒 Collector");
@@ -100,6 +100,13 @@ export function calculateScore(stats: UserStats): ScoreResult {
   }
   score += loyaltyPoints;
   breakdown.loyalty = loyaltyPoints;
+
+  // 5. Gas Usage Badge (UPDATE BARU)
+  // Logika baru: Memberikan badge jika user telah membakar cukup banyak gas
+  const gasUsed = parseFloat(stats.totalGasUsed || "0");
+  if (gasUsed >= 0.02) {
+      badges.push("⛽ Gas Guzzler");
+  }
 
   // Level Logic
   let level = "Newbie";

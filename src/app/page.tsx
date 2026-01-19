@@ -39,8 +39,6 @@ export default function Home() {
       if (!response.ok) {
         setErrorMsg(result.error || "Gagal mengambil data wallet.");
       } else {
-        // PERBAIKAN: Mapping data API ke state
-        // API sekarang mengembalikan 'resolvedName', kita gunakan itu.
         setData({
           ...result,
           resolvedName: result.resolvedName || (queryAddress.includes('.') ? queryAddress : null)
@@ -64,8 +62,12 @@ export default function Home() {
 
   const handleSearch = (query: string) => { fetchData(query); };
 
-  const currentScore = data ? calculateScore(data).totalScore : 0;
-  const shareText = `I checked my Onchain Score on Base! Score: ${currentScore}/100 🚀 Check yours here:`;
+  // UPDATE BARU: Share text yang lebih dinamis berdasarkan Level
+  const scoreResult = data ? calculateScore(data) : null;
+  const currentScore = scoreResult ? scoreResult.totalScore : 0;
+  const currentLevel = scoreResult ? scoreResult.level : "Newbie";
+
+  const shareText = `I'm a ${currentLevel} on Base! Score: ${currentScore}/100 🚀 Check your onchain profile:`;
   const shareUrl = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareText);
 
   const handleShare = useCallback(() => {
