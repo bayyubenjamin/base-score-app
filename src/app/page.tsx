@@ -1,4 +1,3 @@
-// src/app/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
@@ -10,14 +9,18 @@ import ProfileCard from "@/components/ProfileCard";
 import StatsGrid from "@/components/StatsGrid";
 import SearchBar from "@/components/SearchBar";
 import HistoryList from "@/components/HistoryList";
-import { UserStats, calculateScore } from "@/lib/scoring";
+import { calculateScore } from "@/lib/scoring";
+import { useUserStats } from "@/hooks/useUserStats"; // Import Hook Baru
 
 export default function Home() {
   const { address, isConnected } = useAccount();
-  const [data, setData] = useState<UserStats | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isFrameContext, setIsFrameContext] = useState(false);
+
+  // LOGIC BARU: Menggunakan React Query Hook
+  // Otomatis fetch jika address connect, atau jika user search manual
+  const targetAddress = searchQuery || (isConnected ? address : undefined);
+  const { data, isLoading, error, refetch } = useUserStats(targetAddress, true);
 
   useEffect(() => {
     const checkContext = async () => {
@@ -27,46 +30,15 @@ export default function Home() {
     checkContext();
   }, []);
 
-  const fetchData = async (queryAddress: string) => {
-    setLoading(true);
-    setErrorMsg(""); 
-    setData(null);
-    
-    try {
-      const response = await fetch(`/api/user?address=${queryAddress}`);
-      const result = await response.json();
-
-      if (!response.ok) {
-        setErrorMsg(result.error || "Gagal mengambil data wallet.");
-      } else {
-        setData({
-          ...result,
-          resolvedName: result.resolvedName || (queryAddress.includes('.') ? queryAddress : null)
-        });
-      }
-    } catch (e) {
-      console.error(e);
-      setErrorMsg("Terjadi kesalahan jaringan/server.");
-    } finally {
-      setLoading(false);
-    }
+  // Handle search hanya perlu mengubah state query, React Query yang urus sisanya
+  const handleSearch = (query: string) => { 
+    setSearchQuery(query);
   };
 
-  useEffect(() => {
-    if (isConnected && address) {
-        if (data?.address.toLowerCase() !== address.toLowerCase()) {
-            fetchData(address);
-        }
-    }
-  }, [isConnected, address, data?.address]);
-
-  const handleSearch = (query: string) => { fetchData(query); };
-
-  // UPDATE BARU: Share text yang lebih dinamis berdasarkan Level
   const scoreResult = data ? calculateScore(data) : null;
   const currentScore = scoreResult ? scoreResult.totalScore : 0;
   const currentLevel = scoreResult ? scoreResult.level : "Newbie";
-
+  
   const shareText = `I'm a ${currentLevel} on Base! Score: ${currentScore}/100 🚀 Check your onchain profile:`;
   const shareUrl = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareText);
 
@@ -106,17 +78,18 @@ export default function Home() {
         <p className="text-slate-500 text-sm">Analyze your wallet activity & history on Base.</p>
       </div>
 
-      <SearchBar onSearch={handleSearch} isLoading={loading} />
+      <SearchBar onSearch={handleSearch} isLoading={isLoading} />
 
       <div className="w-full max-w-md mt-6 min-h-[300px] flex flex-col items-center pb-20">
-        {errorMsg && (
+        {error && (
             <div className="w-full p-4 bg-red-900/20 border border-red-800 text-red-200 rounded-xl flex flex-col items-center animate-in fade-in slide-in-from-bottom-4">
                 <p className="font-bold text-sm">❌ Oops!</p>
-                <p className="text-xs text-center mt-1 opacity-80">{errorMsg}</p>
+                <p className="text-xs text-center mt-1 opacity-80">{(error as Error).message}</p>
+                <button onClick={() => refetch()} className="mt-2 text-xs underline hover:text-white">Try Again</button>
             </div>
         )}
 
-        {loading && (
+        {isLoading && (
             <div className="w-full flex flex-col items-center animate-pulse mt-10">
                 <div className="h-48 w-full bg-slate-900 rounded-2xl mb-4 border border-slate-800"></div>
                 <div className="flex gap-2 items-center text-blue-400 font-mono text-xs">
@@ -125,7 +98,7 @@ export default function Home() {
             </div>
         )}
 
-        {!loading && !errorMsg && data && (
+        {!isLoading && !error && data && (
             <div className="w-full animate-in zoom-in-95 duration-300">
                 <ProfileCard data={data} />
                 <StatsGrid data={data} />
