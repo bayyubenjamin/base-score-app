@@ -1,5 +1,8 @@
-import { X, Smartphone, QrCode, Wallet, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Smartphone, QrCode, Wallet, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Connector } from 'wagmi';
+import { useSignIn } from '@farcaster/auth-kit';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface ConnectModalProps {
   isOpen: boolean;
@@ -9,9 +12,28 @@ interface ConnectModalProps {
 }
 
 export function ConnectModal({ isOpen, onClose, connectors, connect }: ConnectModalProps) {
+  // State untuk mengatur tampilan modal (list menu atau scan QR Farcaster)
+  const [view, setView] = useState<'list' | 'farcaster'>('list');
+  
+  // Hook Farcaster
+  const { signIn, url: farcasterUrl, data: farcasterData, isSuccess: isFarcasterSuccess } = useSignIn();
+
+  // Reset view saat modal ditutup/dibuka
+  useEffect(() => {
+    if (isOpen) setView('list');
+  }, [isOpen]);
+
+  // Handle sukses login Farcaster
+  useEffect(() => {
+    if (isFarcasterSuccess && farcasterData) {
+      console.log("Farcaster Login Success:", farcasterData);
+      // Di sini Anda bisa menyimpan data user ke state global/context jika perlu
+      onClose();
+    }
+  }, [isFarcasterSuccess, farcasterData, onClose]);
+
   if (!isOpen) return null;
 
-  // Mencari connector yang tepat
   const walletConnectItem = connectors.find((c) => c.id === 'walletConnect');
   const coinbaseItem = connectors.find((c) => c.id === 'coinbaseWalletSDK');
 
@@ -20,37 +42,49 @@ export function ConnectModal({ isOpen, onClose, connectors, connect }: ConnectMo
       connect({ connector });
       onClose();
     } else {
-      // Fallback cerdas: Jika connector spesifik tidak ketemu, pakai yang pertama
-      // Ini mengatasi masalah "tombol tidak bisa diklik"
       const firstAvailable = connectors[0];
       if (firstAvailable) {
         connect({ connector: firstAvailable });
         onClose();
-      } else {
-        alert("No wallet connectors found. Please check configuration.");
       }
     }
   };
 
+  const handleFarcasterClick = () => {
+    setView('farcaster');
+    signIn(); // Generate QR Code baru
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop dengan Blur Kuat & Animasi Masuk */}
+      {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-[#050505]/60 backdrop-blur-xl animate-in fade-in duration-300"
         onClick={onClose}
       />
 
-      {/* Kontainer Modal Emboss */}
-      <div className="relative w-full max-w-md bg-gradient-to-b from-[#1a1f2e] to-[#0B0E14] rounded-[2rem] shadow-2xl border border-white/10 overflow-hidden animate-in zoom-in-95 duration-300 transform transition-all group">
+      {/* Modal Container */}
+      <div className="relative w-full max-w-md bg-gradient-to-b from-[#1a1f2e] to-[#0B0E14] rounded-[2rem] shadow-2xl border border-white/10 overflow-hidden animate-in zoom-in-95 duration-300 transform transition-all">
         
-        {/* Efek Lighting Top Border */}
+        {/* Lighting Effect */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-50" />
 
-        {/* Header */}
+        {/* Header Dynamic */}
         <div className="p-8 pb-4 flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-black text-white tracking-tight">Connect Wallet</h2>
-            <p className="text-gray-400 text-sm mt-1">Choose your preferred gateway</p>
+            {view === 'farcaster' ? (
+               <button 
+                onClick={() => setView('list')}
+                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-2 text-sm font-bold uppercase tracking-wider"
+               >
+                 <ArrowLeft size={14} /> Back
+               </button>
+            ) : (
+               <h2 className="text-2xl font-black text-white tracking-tight">Connect</h2>
+            )}
+            <p className="text-gray-400 text-sm">
+              {view === 'farcaster' ? 'Scan with Warpcast' : 'Choose your gateway'}
+            </p>
           </div>
           <button 
             onClick={onClose}
@@ -60,51 +94,96 @@ export function ConnectModal({ isOpen, onClose, connectors, connect }: ConnectMo
           </button>
         </div>
 
-        {/* Pilihan Wallet */}
-        <div className="p-6 space-y-4">
+        {/* CONTENT AREA */}
+        <div className="p-6 pt-2 space-y-3 min-h-[300px]">
           
-          {/* Option 1: WalletConnect (UTAMA) */}
-          <button
-            onClick={() => handleConnect(walletConnectItem)}
-            className="w-full relative group overflow-hidden rounded-2xl p-[1px] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-          >
-            {/* Gradient Border Animasi */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 opacity-20 group-hover:opacity-100 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
-            
-            {/* Inner Content */}
-            <div className="relative h-full bg-[#151a25] group-hover:bg-[#1a202e] rounded-2xl p-4 flex items-center gap-4 transition-all duration-300">
-               <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-300">
-                  <QrCode className="text-white" size={26} />
-               </div>
-               <div className="flex-1 text-left">
-                  <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">WalletConnect</h3>
-                  <p className="text-xs text-gray-400">Scan QR with MetaMask, Rainbow, Trust</p>
-               </div>
-               <ChevronRight className="text-gray-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
-            </div>
-          </button>
+          {/* VIEW 1: LIST MENU */}
+          {view === 'list' && (
+            <>
+              {/* Option 1: Farcaster (Highlight) */}
+              <button
+                onClick={handleFarcasterClick}
+                className="w-full group relative overflow-hidden rounded-2xl p-[1px] focus:outline-none"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 opacity-20 group-hover:opacity-100 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+                <div className="relative h-full bg-[#151a25] group-hover:bg-[#1a202e] rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 border border-white/5">
+                   <div className="w-12 h-12 rounded-xl bg-[#855DCD] flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/20 group-hover:scale-110 transition-transform">
+                      {/* Logo Farcaster Sederhana */}
+                      <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.24.24H5.76A5.76 5.76 0 0 0 0 6v12a5.76 5.76 0 0 0 5.76 5.76h12.48A5.76 5.76 0 0 0 24 18V6A5.76 5.76 0 0 0 18.24.24m.816 17.166v.504a.49.49 0 0 1 .543.48v.588a.504.504 0 0 1-.504.504H14.406v-7.308l-.006 7.308H9.606v-7.308l-.006 7.308H4.902a.504.504 0 0 1-.504-.504v-.588a.49.49 0 0 1 .543-.48v-.504a1.008 1.008 0 0 1 1.008-1.008h12.102a1.008 1.008 0 0 1 1.008 1.008h-.006z"/>
+                      </svg>
+                   </div>
+                   <div className="flex-1 text-left">
+                      <h3 className="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">Farcaster</h3>
+                      <p className="text-xs text-gray-400">Login with Warpcast</p>
+                   </div>
+                   <ChevronRight className="text-gray-600 group-hover:text-white" />
+                </div>
+              </button>
 
-          {/* Option 2: Base Smart Wallet */}
-          <button
-            onClick={() => handleConnect(coinbaseItem)}
-            className="w-full group relative rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] p-4 flex items-center gap-4 text-left transition-all hover:border-white/10"
-          >
-            <div className="w-14 h-14 rounded-xl bg-[#0052FF] flex items-center justify-center shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Smartphone className="text-white" size={26} />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-white">Smart Wallet</h3>
-              <p className="text-xs text-gray-400">Powered by Coinbase & Passkeys</p>
-            </div>
-          </button>
+              <div className="flex items-center gap-4 my-2">
+                 <div className="h-px bg-white/10 flex-1"></div>
+                 <span className="text-[10px] text-gray-500 font-bold uppercase">OR</span>
+                 <div className="h-px bg-white/10 flex-1"></div>
+              </div>
+
+              {/* Option 2: Smart Wallet */}
+              <button
+                onClick={() => handleConnect(coinbaseItem)}
+                className="w-full group p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all flex items-center gap-4 text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#0052FF] flex items-center justify-center shrink-0">
+                  <Smartphone className="text-white" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">Smart Wallet</h3>
+                  <p className="text-xs text-gray-400">Passkeys & Social Login</p>
+                </div>
+              </button>
+
+              {/* Option 3: WalletConnect */}
+              <button
+                onClick={() => handleConnect(walletConnectItem)}
+                className="w-full group p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all flex items-center gap-4 text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#3B99FC] flex items-center justify-center shrink-0">
+                  <QrCode className="text-white" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">WalletConnect</h3>
+                  <p className="text-xs text-gray-400">Metamask, Rainbow, Trust</p>
+                </div>
+              </button>
+            </>
+          )}
+
+          {/* VIEW 2: FARCASTER QR SCAN */}
+          {view === 'farcaster' && (
+             <div className="flex flex-col items-center justify-center animate-in slide-in-from-right duration-300">
+                <div className="bg-white p-4 rounded-3xl shadow-[0_0_40px_-10px_rgba(133,93,205,0.5)] mb-6">
+                   {farcasterUrl ? (
+                      <QRCodeSVG value={farcasterUrl} size={220} />
+                   ) : (
+                      <div className="w-[220px] h-[220px] bg-gray-100 rounded-xl flex items-center justify-center">
+                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                      </div>
+                   )}
+                </div>
+                
+                <p className="text-center text-sm text-gray-300 max-w-[80%] leading-relaxed">
+                   Open <strong className="text-purple-400">Warpcast</strong> on your phone <br/>
+                   Go to Settings &gt; Connected Apps &gt; Scan QR
+                </p>
+             </div>
+          )}
 
         </div>
 
         {/* Footer */}
-        <div className="p-6 pt-2 text-center">
+        <div className="p-4 text-center bg-black/20">
             <div className="flex items-center justify-center gap-2 text-[10px] text-gray-500 uppercase tracking-widest font-bold">
                 <Wallet size={10} />
-                Secured by OnchainKit
+                Secured by OnchainKit & AuthKit
             </div>
         </div>
       </div>
