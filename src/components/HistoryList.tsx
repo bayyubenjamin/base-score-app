@@ -1,135 +1,96 @@
 import { Transaction } from "@/lib/scoring";
-import { ExternalLink, ArrowUpRight, ArrowDownLeft, Clock, SearchX } from "lucide-react";
-import { cn } from "@/lib/utils"; // Pastikan ada cn utility, atau pakai template literal biasa
+import { ExternalLink, ArrowDownLeft, ArrowUpRight, FileClock } from "lucide-react";
 
-export default function HistoryList({ 
+// PERBAIKAN: Mengganti 'export default' menjadi 'export' (Named Export)
+// agar cocok dengan import { HistoryList } di page.tsx
+export function HistoryList({ 
   history, 
   currentAddress 
 }: { 
   history: Transaction[], 
   currentAddress: string 
 }) {
-  // Helper: Format Address (0x1234...5678)
-  const truncateAddr = (addr: string) => {
-    if (!addr) return "Unknown";
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
-
-  // Helper: Format Value biar gak berantakan kalau desimal panjang
+  const formatAddr = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "Unknown";
+  
   const formatValue = (val: string) => {
     const num = parseFloat(val);
-    if (num === 0) return "0";
+    if (num === 0) return "0.00";
     if (num < 0.0001) return "< 0.0001";
     return num.toFixed(4);
   };
 
-  // 1. Handle Empty State dengan Cantik
   if (!history || history.length === 0) {
     return (
-      <div className="w-full max-w-3xl mt-8">
-        <h3 className="text-xl font-bold text-white mb-4 px-1">Recent Activity</h3>
-        <div className="flex flex-col items-center justify-center py-12 rounded-2xl border border-dashed border-slate-700 bg-slate-900/30">
-          <div className="bg-slate-800/50 p-4 rounded-full mb-3">
-            <SearchX className="w-8 h-8 text-slate-500" />
-          </div>
-          <p className="text-slate-400 font-medium">No transactions found</p>
-          <p className="text-slate-600 text-sm">Your blockchain footprint is clean.</p>
-        </div>
+      <div className="mt-8 p-12 text-center rounded-xl border border-dashed border-gray-800">
+        <p className="text-gray-500">No recent transaction data available.</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-3xl mt-8">
-      <div className="flex items-center justify-between mb-4 px-1">
-        <h3 className="text-xl font-bold text-white">Recent Activity</h3>
-        <span className="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">
-          Last {history.length} Tx
-        </span>
+    <div className="mt-8">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <FileClock size={18} className="text-blue-500" />
+          Recent Transactions
+        </h3>
       </div>
 
-      <div className="bg-slate-900/60 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl">
-        <div className="divide-y divide-slate-800/50">
-          {history.map((tx, idx) => {
-            const isIncoming = tx.to?.toLowerCase() === currentAddress.toLowerCase();
-            const counterParty = isIncoming ? tx.from : tx.to;
-            
-            // Simulasi tanggal (karena data API mungkin raw block timestamp)
-            // Idealnya: new Date(parseInt(tx.timeStamp) * 1000).toLocaleDateString...
-            const displayDate = new Date().toLocaleDateString("id-ID", {
-                day: 'numeric', month: 'short'
-            });
+      <div className="bg-[#151A25] border border-[#2B3240] rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-gray-800 bg-gray-900/50">
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Counterparty</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Amount</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {history.map((tx, idx) => {
+                const isIncoming = tx.to?.toLowerCase() === currentAddress.toLowerCase();
+                const displayDate = new Date().toLocaleDateString("en-US", {
+                    month: 'short', day: 'numeric', year: 'numeric'
+                });
 
-            return (
-              <div 
-                key={idx} 
-                className="group relative flex items-center justify-between p-4 hover:bg-slate-800/40 transition-all duration-200"
-              >
-                {/* Left Side: Icon & Context */}
-                <div className="flex items-center gap-4">
-                  {/* Icon Indicator */}
-                  <div className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-full border shadow-sm",
-                    isIncoming 
-                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
-                      : "bg-rose-500/10 border-rose-500/20 text-rose-400"
-                  )}>
-                    {isIncoming ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
-                  </div>
-
-                  {/* Text Details */}
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-slate-200">
-                      {isIncoming ? "Received from" : "Sent to"}
-                      <span className="ml-1 font-mono text-slate-400 group-hover:text-blue-400 transition-colors">
-                        {truncateAddr(counterParty)}
+                return (
+                  <tr key={idx} className="hover:bg-gray-800/30 transition-colors">
+                    <td className="p-4">
+                      <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium ${
+                        isIncoming ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                      }`}>
+                        {isIncoming ? <ArrowDownLeft size={12} /> : <ArrowUpRight size={12} />}
+                        {isIncoming ? "Receive" : "Send"}
+                      </div>
+                    </td>
+                    <td className="p-4 text-sm text-gray-300 font-mono">
+                      {formatAddr(isIncoming ? tx.from : tx.to)}
+                    </td>
+                    <td className="p-4 text-sm text-gray-400">
+                      {displayDate}
+                    </td>
+                    <td className="p-4 text-right">
+                      <span className={`text-sm font-medium ${isIncoming ? 'text-emerald-400' : 'text-gray-300'}`}>
+                        {isIncoming ? "+" : "-"}{formatValue(tx.value)} ETH
                       </span>
-                    </span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-slate-500 flex items-center gap-1">
-                            <Clock size={10} /> {displayDate}
-                        </span>
-                        <span className="text-[10px] uppercase tracking-wider text-slate-600 font-bold border border-slate-800 px-1 rounded">
-                            {tx.asset || "ETH"}
-                        </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Side: Amount & Link */}
-                <div className="flex items-center gap-4 text-right">
-                  <div className="flex flex-col items-end">
-                    <span className={cn(
-                      "font-mono font-bold text-sm tracking-tight",
-                      isIncoming ? "text-emerald-400" : "text-slate-200"
-                    )}>
-                      {isIncoming ? "+" : "-"}{formatValue(tx.value)}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                        {tx.asset || "ETH"}
-                    </span>
-                  </div>
-                  
-                  <a 
-                    href={`https://basescan.org/tx/${tx.hash}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-lg text-slate-600 hover:bg-white/5 hover:text-blue-400 transition-all"
-                    title="View on Basescan"
-                  >
-                    <ExternalLink size={16} />
-                  </a>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        
-        {/* Footer List (Optional: View All) */}
-        <div className="bg-slate-900/80 p-3 text-center border-t border-slate-800/50">
-            <a href={`https://basescan.org/address/${currentAddress}`} target="_blank" className="text-xs text-slate-400 hover:text-white transition-colors">
-                View full history on Basescan &rarr;
-            </a>
+                    </td>
+                    <td className="p-4 text-center">
+                      <a 
+                        href={`https://basescan.org/tx/${tx.hash}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-500 hover:text-blue-400 transition-colors inline-block p-1"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
