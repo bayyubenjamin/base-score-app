@@ -12,18 +12,15 @@ interface ConnectModalProps {
 }
 
 export function ConnectModal({ isOpen, onClose, connectors, connect }: ConnectModalProps) {
-  // State untuk mengatur tampilan modal (list menu atau scan QR Farcaster)
   const [view, setView] = useState<'list' | 'farcaster'>('list');
   
-  // Hook Farcaster
-  const { signIn, url: farcasterUrl, data: farcasterData, isSuccess: isFarcasterSuccess } = useSignIn();
+  // PERBAIKAN: Menambahkan {} kosong sebagai argumen
+  const { signIn, url: farcasterUrl, data: farcasterData, isSuccess: isFarcasterSuccess } = useSignIn({});
 
-  // Reset view saat modal ditutup/dibuka
   useEffect(() => {
     if (isOpen) setView('list');
   }, [isOpen]);
 
-  // Handle sukses login Farcaster
   useEffect(() => {
     if (isFarcasterSuccess && farcasterData) {
       console.log("Farcaster Login Success:", farcasterData);
@@ -33,7 +30,6 @@ export function ConnectModal({ isOpen, onClose, connectors, connect }: ConnectMo
 
   if (!isOpen) return null;
 
-  // Filter connectors
   const walletConnectItem = connectors.find((c) => c.id === 'walletConnect');
   const coinbaseItem = connectors.find((c) => c.id === 'coinbaseWalletSDK');
 
@@ -52,7 +48,7 @@ export function ConnectModal({ isOpen, onClose, connectors, connect }: ConnectMo
 
   const handleFarcasterClick = () => {
     setView('farcaster');
-    signIn(); // Generate QR Code baru
+    signIn(); 
   };
 
   return (
