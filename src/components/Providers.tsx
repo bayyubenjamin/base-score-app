@@ -5,14 +5,23 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { base } from 'wagmi/chains'; 
 import { type ReactNode, useState } from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi'; 
-import { coinbaseWallet } from 'wagmi/connectors';
+import { walletConnect } from 'wagmi/connectors';
 
-// Setup Wagmi Config
+// Ganti dengan Project ID Anda dari cloud.reown.com
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID_HERE';
+
 const config = createConfig({
   chains: [base],
   connectors: [
-    coinbaseWallet({
-      appName: 'Base Score App',
+    walletConnect({ 
+      projectId, 
+      showQrModal: true, // Memunculkan modal QR bawaan WalletConnect
+      metadata: {
+        name: 'Base Onchain Profile',
+        description: 'Professional Onchain Score Analyzer',
+        url: 'https://base-score-app.vercel.app',
+        icons: ['https://avatars.githubusercontent.com/u/37784886']
+      }
     }),
   ],
   transports: {
@@ -21,7 +30,6 @@ const config = createConfig({
 });
 
 export function Providers({ children }: { children: ReactNode }) {
-  // Setup React Query Client dengan state agar tidak re-init saat render ulang
   const [queryClient] = useState(() => new QueryClient());
 
   return (

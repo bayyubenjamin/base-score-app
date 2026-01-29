@@ -3,42 +3,50 @@
 @tailwind utilities;
 
 :root {
-  --background: #0f1115; /* Dark Base-style background */
-  --foreground: #ffffff;
-  --card-bg: rgba(255, 255, 255, 0.05);
-  --card-border: rgba(255, 255, 255, 0.1);
-  --primary: #0052FF; /* Base Blue */
-  --secondary: #32353d;
+  /* Professional Fintech Dark Theme */
+  --background: #0B0E14; /* Deep Navy/Black */
+  --surface: #151A25;    /* Card Background */
+  --surface-hover: #1E2532;
+  --border: #2B3240;     /* Subtle Borders */
+  --primary: #0052FF;    /* Base Blue (Professional) */
+  --primary-hover: #0045D8;
+  --text-main: #FFFFFF;
+  --text-muted: #94A3B8; /* Slate 400 */
 }
 
 body {
-  color: var(--foreground);
+  color: var(--text-main);
   background: var(--background);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
+  antialiased;
 }
 
-/* Glassmorphism Utilities */
-.glass-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--card-border);
+/* Professional Card Utility */
+.pro-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease-in-out;
 }
 
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+.pro-card:hover {
+  border-color: #3E4756;
+  background: var(--surface-hover);
 }
 
-/* Custom Scrollbar for history lists */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #2B3240;
   border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3E4756;
 }
