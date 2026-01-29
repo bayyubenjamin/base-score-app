@@ -5,36 +5,35 @@ import { useAccount } from 'wagmi';
 import { useUserStats } from '@/hooks/useUserStats';
 import { StatsGrid } from '@/components/StatsGrid';
 import { ProfileCard } from '@/components/ProfileCard';
-import HistoryList from '@/components/HistoryList'; // FIX: Removed curly braces (Default Export)
+import HistoryList from '@/components/HistoryList'; // FIX: Default Import (tanpa kurung kurawal)
+import { 
+  Wallet, 
+  ConnectWallet, 
+  WalletDropdown, 
+  WalletDropdownDisconnect, 
+  WalletDropdownLink 
+} from '@coinbase/onchainkit/wallet'; // FIX: Gunakan OnchainKit Components
+import {
+  Address,
+  Avatar,
+  Name,
+  Identity,
+  EthBalance,
+} from '@coinbase/onchainkit/identity';
 
 export default function Home() {
-  const { address, isConnected } = useAccount(); // FIX: Added isConnected
+  const { address, isConnected } = useAccount();
   
-  // FIX: Destructure data -> stats, isLoading -> loading, pass isConnected
+  // FIX: Destructure 'data' sebagai 'stats' karena React Query mengembalikan object { data, isLoading, ... }
   const { data: stats, isLoading: loading, error } = useUserStats(address, isConnected);
   
   const [score, setScore] = useState(0);
 
   // Animate score on load
-  // Note: Assuming calculateScore result or stats contains a 'totalScore' or similar property
-  // Since useUserStats returns UserStats, we need to check where 'score' comes from.
-  // Assuming strict types, UserStats doesn't have 'score'. 
-  // You might need to call calculateScore(stats) here or if the API returns it.
-  // For now, adhering to your logic assuming stats might have it or you adapt it:
-  const displayScore = stats ? 0 : 0; // Placeholder logic if stats doesn't have score directly
-
-  // Jika Anda ingin menghitung skor di frontend:
-  // import { calculateScore } from '@/lib/scoring';
-  // const calculatedScore = stats ? calculateScore(stats).totalScore : 0;
-  
-  // For the purpose of fixing the BUILD error, I will keep your effect logic 
-  // but protect it against undefined stats.
   useEffect(() => {
-    // Assuming API returns an extended object or you calculate it.
-    // Let's assume you fetch the calculated score or calculate it here.
-    // Since UserStats type defined in your file doesn't have 'score', 
-    // let's use a safe check.
-    const targetScore = (stats as any)?.score || 0; // Type casting for safety if API sends it
+    // Safety check: casting ke any jika property score belum ada di type UserStats
+    // Sesuaikan logic ini jika API Anda mengembalikan struktur berbeda
+    const targetScore = (stats as any)?.score || (stats as any)?.totalScore || 0;
 
     if (targetScore) {
       let start = 0;
@@ -77,8 +76,14 @@ export default function Home() {
           </div>
           <h1 className="text-3xl font-bold text-white">Connect Wallet</h1>
           <p className="text-gray-400">Connect your wallet to reveal your Base Onchain Score and stats.</p>
-          <div className="pt-4">
-            <appkit-button />
+          <div className="pt-4 flex justify-center">
+            {/* FIX: Mengganti <appkit-button> dengan OnchainKit ConnectWallet */}
+            <Wallet>
+              <ConnectWallet className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition-all">
+                <Avatar className="h-6 w-6" />
+                <Name />
+              </ConnectWallet>
+            </Wallet>
           </div>
         </div>
       </main>
@@ -141,11 +146,12 @@ export default function Home() {
         </div>
       </div>
 
+      {/* FIX: Ensure fallback to null if undefined to match type */}
       <StatsGrid stats={stats || null} loading={loading} />
       
       <div className="mt-8">
         <h3 className="text-white font-bold text-lg mb-4">Activity History</h3>
-        {/* FIX: Pass correct props: history array and currentAddress string */}
+        {/* FIX: Ensure correct props passing for HistoryList */}
         <HistoryList history={stats?.history || []} currentAddress={address} />
       </div>
     </main>
