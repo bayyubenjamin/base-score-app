@@ -39,6 +39,15 @@ export function StatsGrid({ stats, loading }: StatsGridProps) {
 
   if (!stats) return null;
 
+  // FIX: Hitung umur wallet berdasarkan joinDate
+  const walletAgeDays = (() => {
+    if (!stats.joinDate) return 0;
+    const join = new Date(stats.joinDate);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - join.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+  })();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-2">
@@ -50,9 +59,9 @@ export function StatsGrid({ stats, loading }: StatsGridProps) {
         {/* Wallet Age */}
         <StatItem
           label="Wallet Age"
-          value={`${stats.walletAgeDays} Days`}
+          value={`${walletAgeDays} Days`} // FIX: Gunakan variabel hasil hitungan
           subtext="Loyalty Bonus"
-          scoreImpact={Math.min(stats.walletAgeDays * 0.1, 50).toFixed(0)} // Example logic
+          scoreImpact={Math.min(walletAgeDays * 0.1, 50).toFixed(0)} // FIX: Gunakan variabel hasil hitungan
           icon={
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -63,9 +72,9 @@ export function StatsGrid({ stats, loading }: StatsGridProps) {
         {/* Transaction Volume */}
         <StatItem
           label="Volume"
-          value={`${stats.transactionCount} Txns`}
+          value={`${stats.txCount} Txns`}
           subtext="Onchain Activity"
-          scoreImpact={Math.min(stats.transactionCount * 2, 100).toFixed(0)}
+          scoreImpact={Math.min(stats.txCount * 2, 100).toFixed(0)}
           icon={
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -86,10 +95,10 @@ export function StatsGrid({ stats, loading }: StatsGridProps) {
           }
         />
 
-        {/* Balance (Example - assuming accessible or mapped) */}
+        {/* Balance */}
         <StatItem
           label="Assets"
-          value="ETH"
+          value={`${parseFloat(stats.ethBalance).toFixed(4)} ETH`}
           subtext="Native Balance"
           scoreImpact="--"
           icon={
@@ -107,7 +116,7 @@ export function StatsGrid({ stats, loading }: StatsGridProps) {
           Boost Your Score
         </h4>
         <p className="text-xs text-gray-300 leading-relaxed">
-          Minting a <strong>Basename</strong> or holding > 0.1 ETH can increase your Identity score by up to 150 points.
+          Minting a <strong>Basename</strong> or holding &gt; 0.1 ETH can increase your Identity score by up to 150 points.
         </p>
       </div>
     </div>

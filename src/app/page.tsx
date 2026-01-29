@@ -5,18 +5,39 @@ import { useAccount } from 'wagmi';
 import { useUserStats } from '@/hooks/useUserStats';
 import { StatsGrid } from '@/components/StatsGrid';
 import { ProfileCard } from '@/components/ProfileCard';
-import { HistoryList } from '@/components/HistoryList';
+import HistoryList from '@/components/HistoryList'; // FIX: Default Import (tanpa kurung kurawal)
+import { 
+  Wallet, 
+  ConnectWallet, 
+  WalletDropdown, 
+  WalletDropdownDisconnect, 
+  WalletDropdownLink 
+} from '@coinbase/onchainkit/wallet'; // FIX: Gunakan OnchainKit Components
+import {
+  Address,
+  Avatar,
+  Name,
+  Identity,
+  EthBalance,
+} from '@coinbase/onchainkit/identity';
 
 export default function Home() {
-  const { address } = useAccount();
-  const { stats, loading, error } = useUserStats(address);
+  const { address, isConnected } = useAccount();
+  
+  // FIX: Destructure 'data' sebagai 'stats' karena React Query mengembalikan object { data, isLoading, ... }
+  const { data: stats, isLoading: loading, error } = useUserStats(address, isConnected);
+  
   const [score, setScore] = useState(0);
 
   // Animate score on load
   useEffect(() => {
-    if (stats?.score) {
+    // Safety check: casting ke any jika property score belum ada di type UserStats
+    // Sesuaikan logic ini jika API Anda mengembalikan struktur berbeda
+    const targetScore = (stats as any)?.score || (stats as any)?.totalScore || 0;
+
+    if (targetScore) {
       let start = 0;
-      const end = stats.score;
+      const end = targetScore;
       const duration = 1000;
       const increment = end / (duration / 16);
 
@@ -31,7 +52,7 @@ export default function Home() {
       }, 16);
       return () => clearInterval(timer);
     }
-  }, [stats?.score]);
+  }, [stats]);
 
   // Determine Rank Color
   const getRankColor = (s: number) => {
@@ -55,8 +76,14 @@ export default function Home() {
           </div>
           <h1 className="text-3xl font-bold text-white">Connect Wallet</h1>
           <p className="text-gray-400">Connect your wallet to reveal your Base Onchain Score and stats.</p>
-          <div className="pt-4">
-            <appkit-button />
+          <div className="pt-4 flex justify-center">
+            {/* FIX: Mengganti <appkit-button> dengan OnchainKit ConnectWallet */}
+            <Wallet>
+              <ConnectWallet className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition-all">
+                <Avatar className="h-6 w-6" />
+                <Name />
+              </ConnectWallet>
+            </Wallet>
           </div>
         </div>
       </main>
@@ -119,11 +146,13 @@ export default function Home() {
         </div>
       </div>
 
-      <StatsGrid stats={stats} loading={loading} />
+      {/* FIX: Ensure fallback to null if undefined to match type */}
+      <StatsGrid stats={stats || null} loading={loading} />
       
       <div className="mt-8">
         <h3 className="text-white font-bold text-lg mb-4">Activity History</h3>
-        <HistoryList address={address} />
+        {/* FIX: Ensure correct props passing for HistoryList */}
+        <HistoryList history={stats?.history || []} currentAddress={address} />
       </div>
     </main>
   );
