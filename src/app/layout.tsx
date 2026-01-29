@@ -1,28 +1,25 @@
-// src/app/layout.tsx
-import './globals.css';
-import '@coinbase/onchainkit/styles.css'; 
-import { Providers } from '@/components/Providers';
-import FarcasterProvider from '@/components/FarcasterProvider'; // Import Provider Baru
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css"; // Ini yang menghubungkan CSS tadi
+import { Providers } from "@/components/Providers";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'OnChain Score Checker',
-  description: 'Analyze your Base wallet activity',
+  title: "Base Score App",
+  description: "Check your onchain reputation score on Base",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
-      <body className="bg-slate-950">
-        {/* Bungkus dengan Providers (OnchainKit) dan FarcasterProvider */}
+      <body className={inter.className}>
         <Providers>
-          <FarcasterProvider>
-            {children}
-          </FarcasterProvider>
+          {children}
         </Providers>
       </body>
     </html>

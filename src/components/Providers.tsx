@@ -1,62 +1,45 @@
 'use client';
 
+import { ReactNode } from 'react';
+import { WagmiProvider, createConfig, http } from 'wagmi';
+import { base } from 'wagmi/chains';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; 
-import { base } from 'wagmi/chains'; 
-import { type ReactNode, useState } from 'react';
-import { WagmiProvider, createConfig, http } from 'wagmi'; 
-import { walletConnect, coinbaseWallet } from 'wagmi/connectors';
-import { AuthKitProvider } from '@farcaster/auth-kit'; 
-import '@farcaster/auth-kit/styles.css'; 
+import { AuthKitProvider } from '@farcaster/auth-kit';
+import { coinbaseWallet, walletConnect, injected } from 'wagmi/connectors';
+import '@coinbase/onchainkit/styles.css';
+import '@farcaster/auth-kit/styles.css';
 
-// Pastikan ID ini ada di .env.local Anda
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID_HERE';
-
-const config = createConfig({
+const wagmiConfig = createConfig({
   chains: [base],
-  connectors: [
-    walletConnect({ 
-      projectId, 
-      showQrModal: true, 
-      metadata: {
-        name: 'Base Score Pro',
-        description: 'Professional Onchain Analytics',
-        // Ganti URL ini dengan domain Vercel Anda yang sebenarnya jika sudah ada
-        url: 'https://base-score-app.vercel.app', 
-        icons: ['https://avatars.githubusercontent.com/u/37784886']
-      }
-    }),
-    coinbaseWallet({
-      appName: 'Base Score Pro',
-      preference: 'smartWalletOnly',
-    }),
-  ],
   transports: {
     [base.id]: http(),
   },
+  connectors: [
+    injected(), 
+    coinbaseWallet({ appName: 'Base Score App' }),
+    walletConnect({ projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || '' }),
+  ],
+  ssr: true,
 });
 
-// Konfigurasi Farcaster Auth
+const queryClient = new QueryClient();
+
 const farcasterConfig = {
   rpcUrl: 'https://mainnet.optimism.io',
-  domain: 'base-score-app.vercel.app', // Sesuaikan dengan domain deployment
-  siweUri: 'https://base-score-app.vercel.app/login',
+  domain: 'basescore.app',
+  siweUri: 'https://basescore.app/login',
 };
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
-
   return (
-    <WagmiProvider config={config}>
+    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <AuthKitProvider config={farcasterConfig}>
-          <OnchainKitProvider
-            apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-            chain={base}
-          >
+        <OnchainKitProvider apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY} chain={base}>
+          <AuthKitProvider config={farcasterConfig}>
             {children}
-          </OnchainKitProvider>
-        </AuthKitProvider>
+          </AuthKitProvider>
+        </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
