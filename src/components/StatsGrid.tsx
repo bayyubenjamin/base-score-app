@@ -1,124 +1,115 @@
-"use client"; // Diperlukan karena kita menambah interaksi (copy to clipboard)
+import { UserStats } from '@/lib/scoring';
 
-import { useState } from "react";
-import { UserStats } from "@/lib/scoring";
-import { Wallet, Layers, Activity, Calendar, User, Copy, Check, ExternalLink } from "lucide-react";
-import { cn } from "@/lib/utils"; // Asumsi kamu punya utility cn, jika tidak hapus saja dan pakai string biasa
+interface StatsGridProps {
+  stats: UserStats | null;
+  loading: boolean;
+}
 
-export default function StatsGrid({ data }: { data: UserStats }) {
-  const [copied, setCopied] = useState(false);
-
-  // Format Tanggal yang lebih human-readable
-  const joinDate = new Date(data.joinDate).toLocaleDateString("id-ID", {
-    month: "short",
-    year: "numeric",
-  });
-
-  // Handle Copy Address
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(data.address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  // Helper untuk card wrapper
-  const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-md transition-all duration-300 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10 group",
-        className
+// Helper component for individual stat cards
+const StatItem = ({ label, value, subtext, icon, scoreImpact }: any) => (
+  <div className="glass-card p-4 rounded-xl flex flex-col gap-2 transition-transform duration-200 hover:-translate-y-1">
+    <div className="flex justify-between items-start">
+      <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
+        {icon}
+      </div>
+      {scoreImpact && (
+        <span className="text-[10px] font-bold uppercase tracking-wider text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
+          +{scoreImpact} pts
+        </span>
       )}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
-      <div className="relative z-10 h-full">{children}</div>
     </div>
-  );
+    <div>
+      <p className="text-xs text-gray-400 uppercase font-semibold tracking-wider">{label}</p>
+      <p className="text-xl font-bold text-white mt-0.5">{value}</p>
+      {subtext && <p className="text-xs text-gray-500">{subtext}</p>}
+    </div>
+  </div>
+);
+
+export function StatsGrid({ stats, loading }: StatsGridProps) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 gap-4 mt-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-32 bg-white/5 rounded-xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!stats) return null;
 
   return (
-    <div className="mt-8 grid w-full max-w-3xl grid-cols-2 gap-4 md:grid-cols-4">
-      
-      {/* 1. HERO CARD: Identity (Full Width / Col Span 2 on Desktop) */}
-      <Card className="col-span-2 md:col-span-2 flex flex-col justify-center">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-blue-500/20 shadow-lg">
-              <User size={24} />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-slate-400">Identity</h3>
-              <div className="text-xl font-bold text-white">
-                {data.resolvedName || "Anon User"}
-              </div>
-            </div>
-          </div>
-          {data.resolvedName && (
-            <span className="rounded-full bg-blue-500/20 px-2 py-1 text-xs font-medium text-blue-300 border border-blue-500/20">
-              Verified
-            </span>
-          )}
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-white font-bold text-lg">Breakdown</h3>
+        <span className="text-xs text-gray-500">Last updated: Just now</span>
+      </div>
 
-        <div className="mt-4 flex items-center gap-2 rounded-lg bg-black/20 p-2 pl-3">
-          <code className="text-xs text-slate-300 font-mono truncate">
-            {data.address}
-          </code>
-          <button
-            onClick={copyToClipboard}
-            className="ml-auto rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
-            title="Copy Address"
-          >
-            {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-          </button>
-        </div>
-      </Card>
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+        {/* Wallet Age */}
+        <StatItem
+          label="Wallet Age"
+          value={`${stats.walletAgeDays} Days`}
+          subtext="Loyalty Bonus"
+          scoreImpact={Math.min(stats.walletAgeDays * 0.1, 50).toFixed(0)} // Example logic
+          icon={
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+        />
 
-      {/* 2. MAIN STAT: ETH Balance (Big Impact) */}
-      <Card className="col-span-2 md:col-span-2 flex flex-col justify-between">
-        <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-400">Net Worth</span>
-            <Wallet className="h-4 w-4 text-emerald-400" />
-        </div>
-        <div>
-          <div className="text-3xl font-bold text-white tracking-tight">
-            {parseFloat(data.ethBalance).toFixed(4)}
-            <span className="text-lg text-slate-500 ml-1">ETH</span>
-          </div>
-          <div className="mt-1 h-1 w-full rounded-full bg-slate-800">
-             <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-emerald-500 to-blue-500" />
-          </div>
-        </div>
-      </Card>
+        {/* Transaction Volume */}
+        <StatItem
+          label="Volume"
+          value={`${stats.transactionCount} Txns`}
+          subtext="Onchain Activity"
+          scoreImpact={Math.min(stats.transactionCount * 2, 100).toFixed(0)}
+          icon={
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          }
+        />
 
-      {/* 3. SECONDARY STAT: Tx Count */}
-      <Card className="col-span-1">
-        <div className="mb-2 rounded-lg bg-purple-500/10 w-fit p-2">
-            <Activity className="h-5 w-5 text-purple-400" />
-        </div>
-        <div className="text-2xl font-bold text-white font-mono">{data.txCount.toLocaleString()}</div>
-        <div className="text-xs text-slate-400">Total Tx</div>
-      </Card>
+        {/* NFT Holdings */}
+        <StatItem
+          label="Collections"
+          value={stats.nftCount}
+          subtext="NFTs Held"
+          scoreImpact={stats.nftCount * 5}
+          icon={
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          }
+        />
 
-      {/* 4. SECONDARY STAT: NFTs */}
-      <Card className="col-span-1">
-         <div className="mb-2 rounded-lg bg-pink-500/10 w-fit p-2">
-            <Layers className="h-5 w-5 text-pink-400" />
-        </div>
-        <div className="text-2xl font-bold text-white font-mono">{data.nftCount}</div>
-        <div className="text-xs text-slate-400">Collectibles</div>
-      </Card>
+        {/* Balance (Example - assuming accessible or mapped) */}
+        <StatItem
+          label="Assets"
+          value="ETH"
+          subtext="Native Balance"
+          scoreImpact="--"
+          icon={
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+        />
+      </div>
 
-      {/* 5. FOOTER STAT: Join Date (Full Width Mobile, Single on Desktop if needed, but let's span 2 to balance) */}
-      <Card className="col-span-2 flex items-center justify-between bg-slate-800/30">
-        <div className="flex items-center gap-3">
-            <Calendar className="h-5 w-5 text-slate-400" />
-            <div>
-                <div className="text-xs text-slate-400">Member Since</div>
-                <div className="font-semibold text-white">{joinDate}</div>
-            </div>
-        </div>
-        <div className="text-xs text-slate-500 font-mono">BASE MAINNET</div>
-      </Card>
-      
+      {/* Informatif: Suggestion Box */}
+      <div className="glass-card p-4 rounded-xl border-l-4 border-l-yellow-500 bg-yellow-500/5">
+        <h4 className="text-yellow-500 font-bold text-sm mb-1 flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          Boost Your Score
+        </h4>
+        <p className="text-xs text-gray-300 leading-relaxed">
+          Minting a <strong>Basename</strong> or holding > 0.1 ETH can increase your Identity score by up to 150 points.
+        </p>
+      </div>
     </div>
   );
 }
