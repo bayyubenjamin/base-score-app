@@ -50,9 +50,9 @@ export function StatsGrid({ stats, loading }: StatsGridProps) {
         {/* Wallet Age */}
         <StatItem
           label="Wallet Age"
-          value={`${stats.walletAgeDays} Days`}
+          value={`${stats.walletAgeDays || 0} Days`} // Added fallback
           subtext="Loyalty Bonus"
-          scoreImpact={Math.min(stats.walletAgeDays * 0.1, 50).toFixed(0)} // Example logic
+          scoreImpact={Math.min((stats.walletAgeDays || 0) * 0.1, 50).toFixed(0)}
           icon={
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -63,9 +63,9 @@ export function StatsGrid({ stats, loading }: StatsGridProps) {
         {/* Transaction Volume */}
         <StatItem
           label="Volume"
-          value={`${stats.transactionCount} Txns`}
+          value={`${stats.txCount} Txns`} // Fixed property name from transactionCount to txCount based on UserStats type
           subtext="Onchain Activity"
-          scoreImpact={Math.min(stats.transactionCount * 2, 100).toFixed(0)}
+          scoreImpact={Math.min(stats.txCount * 2, 100).toFixed(0)}
           icon={
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -86,10 +86,10 @@ export function StatsGrid({ stats, loading }: StatsGridProps) {
           }
         />
 
-        {/* Balance (Example - assuming accessible or mapped) */}
+        {/* Balance */}
         <StatItem
           label="Assets"
-          value="ETH"
+          value={`${parseFloat(stats.ethBalance).toFixed(4)} ETH`}
           subtext="Native Balance"
           scoreImpact="--"
           icon={
@@ -107,7 +107,8 @@ export function StatsGrid({ stats, loading }: StatsGridProps) {
           Boost Your Score
         </h4>
         <p className="text-xs text-gray-300 leading-relaxed">
-          Minting a <strong>Basename</strong> or holding > 0.1 ETH can increase your Identity score by up to 150 points.
+          {/* FIX: Changed > to &gt; */}
+          Minting a <strong>Basename</strong> or holding &gt; 0.1 ETH can increase your Identity score by up to 150 points.
         </p>
       </div>
     </div>
