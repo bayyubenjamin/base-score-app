@@ -5,80 +5,26 @@ import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { useUserStats } from '@/hooks/useUserStats';
 import { StatsGrid } from '@/components/StatsGrid';
 import { ProfileCard } from '@/components/ProfileCard';
-<<<<<<< HEAD
 import { HistoryList } from '@/components/HistoryList';
 import { ConnectModal } from '@/components/ConnectModal';
-import { Loader2, LogOut, Wallet, Sparkles, ChevronRight } from 'lucide-react';
+import { Wallet, Sparkles } from 'lucide-react';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
-=======
-<<<<<<< HEAD
-import HistoryList from '@/components/HistoryList'; // FIX: Default Import (tanpa kurung kurawal)
-import { 
-  Wallet, 
-  ConnectWallet, 
-  WalletDropdown, 
-  WalletDropdownDisconnect, 
-  WalletDropdownLink 
-} from '@coinbase/onchainkit/wallet'; // FIX: Gunakan OnchainKit Components
-import {
-  Address,
-  Avatar,
-  Name,
-  Identity,
-  EthBalance,
-} from '@coinbase/onchainkit/identity';
-
-export default function Home() {
-  const { address, isConnected } = useAccount();
-  
-  // FIX: Destructure 'data' sebagai 'stats' karena React Query mengembalikan object { data, isLoading, ... }
-  const { data: stats, isLoading: loading, error } = useUserStats(address, isConnected);
-  
-=======
-import { HistoryList } from '@/components/HistoryList';
-import { ConnectModal } from '@/components/ConnectModal';
-import { Loader2, LogOut, Wallet, Sparkles, ChevronRight } from 'lucide-react';
-
-export default function Home() {
-  const { address, isConnected } = useAccount();
->>>>>>> farcaster-fix
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   
   const { data: stats, isLoading: loading } = useUserStats(address, isConnected);
-<<<<<<< HEAD
-=======
->>>>>>> 9a812e3 (Fix connectors list and add embossed connect modal)
->>>>>>> farcaster-fix
   const [score, setScore] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Animasi Score
   useEffect(() => {
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-    // Safety check: casting ke any jika property score belum ada di type UserStats
-    // Sesuaikan logic ini jika API Anda mengembalikan struktur berbeda
-    const targetScore = (stats as any)?.score || (stats as any)?.totalScore || 0;
-
-    if (targetScore) {
-      let start = 0;
-      const end = targetScore;
-      const duration = 1000;
-=======
->>>>>>> farcaster-fix
     const targetScore = (stats as any)?.score || (stats as any)?.totalScore || 0;
     if (targetScore) {
       let start = 0;
       const end = targetScore;
-      const duration = 1500; // Lebih lambat biar dramatis
-<<<<<<< HEAD
-=======
->>>>>>> 9a812e3 (Fix connectors list and add embossed connect modal)
->>>>>>> farcaster-fix
+      const duration = 1500;
       const increment = end / (duration / 16);
       const timer = setInterval(() => {
         start += increment;
@@ -99,30 +45,9 @@ export default function Home() {
     return 'from-gray-400 to-slate-500';
   };
 
-  // --- VIEW: LANDING PAGE (Animatis) ---
+  // --- VIEW: LANDING PAGE (Animatis & 3D) ---
   if (!isConnected || !address) {
     return (
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-      <main className="min-h-screen flex items-center justify-center p-4 bg-[url('/grid.svg')] bg-center">
-        <div className="glass-card max-w-md w-full p-8 rounded-2xl text-center space-y-6">
-          <div className="w-20 h-20 bg-blue-600 rounded-full mx-auto flex items-center justify-center shadow-lg shadow-blue-600/50">
-             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-          </div>
-          <h1 className="text-3xl font-bold text-white">Connect Wallet</h1>
-          <p className="text-gray-400">Connect your wallet to reveal your Base Onchain Score and stats.</p>
-          <div className="pt-4 flex justify-center">
-            {/* FIX: Mengganti <appkit-button> dengan OnchainKit ConnectWallet */}
-            <Wallet>
-              <ConnectWallet className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition-all">
-                <Avatar className="h-6 w-6" />
-                <Name />
-              </ConnectWallet>
-            </Wallet>
-          </div>
-=======
->>>>>>> farcaster-fix
       <main className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
         {/* Animated Background Blobs */}
         <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-600/20 blur-[150px] rounded-full mix-blend-screen animate-float -z-10" />
@@ -158,10 +83,6 @@ export default function Home() {
                 Connect Wallet
               </button>
            </div>
-<<<<<<< HEAD
-=======
->>>>>>> 9a812e3 (Fix connectors list and add embossed connect modal)
->>>>>>> farcaster-fix
         </div>
 
         {/* Modal Logic */}
@@ -177,7 +98,6 @@ export default function Home() {
 
   // --- VIEW: DASHBOARD (Emboss Style) ---
   const radius = 80;
-  const circumference = Math.PI * radius; // Half circle
   
   return (
     <main className="min-h-screen pb-20 relative">
@@ -239,21 +159,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-
-      {/* FIX: Ensure fallback to null if undefined to match type */}
-      <StatsGrid stats={stats || null} loading={loading} />
-      
-      <div className="mt-8">
-        <h3 className="text-white font-bold text-lg mb-4">Activity History</h3>
-        {/* FIX: Ensure correct props passing for HistoryList */}
-        <HistoryList history={stats?.history || []} currentAddress={address} />
-      </div>
-=======
->>>>>>> 9a812e3 (Fix connectors list and add embossed connect modal)
->>>>>>> farcaster-fix
     </main>
   );
 }
